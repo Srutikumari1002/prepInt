@@ -54,7 +54,7 @@ export const App = () => {
   return (
     <ThemeProvider>
       <UserProvider>
-        <Router>
+        <Router basename="/prepInt">
           <Toaster
             position="top-right"
             toastOptions={{
