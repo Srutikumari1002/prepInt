@@ -83,7 +83,7 @@ const initialAtsHistory = [
 export const UserProvider = ({ children }) => {
   const [profile, setProfile] = useState(() => {
     const saved = localStorage.getItem('user_profile');
-    return saved ? JSON.parse(saved) : initialProfile;
+    return saved ? JSON.parse(saved) : null;
   });
 
   const [solvedQuestions, setSolvedQuestions] = useState(() => {

@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
-import { UserProvider } from './context/UserContext';
+import { UserProvider, UserContext } from './context/UserContext';
 import { Toaster } from 'react-hot-toast';
 
 // Pages
 import Home from './pages/Home';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Questions from './pages/Questions';
 import MockInterview from './pages/MockInterview';
@@ -24,12 +25,35 @@ import Footer from './components/Footer';
 const AppLayout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { profile } = useContext(UserContext);
 
-  // If on landing page (Home), don't show the dashboard shell (sidebar, full padding, etc.)
   const isLandingPage = location.pathname === '/';
+  const isLoginPage = location.pathname === '/login';
 
   if (isLandingPage) {
     return <>{children}</>;
+  }
+
+  // Redirect to login if user profile is null and they are not on the login page
+  if (!profile && !isLoginPage) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Redirect to dashboard if logged in user tries to visit the login page
+  if (profile && isLoginPage) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  if (isLoginPage) {
+    return (
+      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-darkBg text-slate-800 dark:text-slate-100 transition-colors duration-200">
+        <Navbar onMenuToggle={() => {}} />
+        <main className="flex-1 p-4 overflow-y-auto flex items-center justify-center">
+          {children}
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -54,7 +78,7 @@ export const App = () => {
   return (
     <ThemeProvider>
       <UserProvider>
-        <Router basename="/prepInt">
+        <Router>
           <Toaster
             position="top-right"
             toastOptions={{
@@ -66,6 +90,7 @@ export const App = () => {
             <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
               
               {/* Dashboard Shell Routes */}
               <Route path="/dashboard" element={<Dashboard />} />
