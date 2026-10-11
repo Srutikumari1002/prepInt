@@ -2,10 +2,11 @@ import React, { useContext } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import ThemeToggle from './ThemeToggle';
-import { FiMenu, FiBell, FiAward } from 'react-icons/fi';
+import { FiMenu, FiBell, FiAward, FiLogOut } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 export const Navbar = ({ onMenuToggle }) => {
-  const { profile, streak } = useContext(UserContext);
+  const { profile, streak, logoutUser } = useContext(UserContext);
   const location = useLocation();
 
   // Don't show full navbar options on landing page if we want, or show it simplified.
@@ -63,19 +64,32 @@ export const Navbar = ({ onMenuToggle }) => {
 
             <ThemeToggle />
 
-            {/* User Profile Quick Access */}
-            {!isLandingPage && (
-              <Link
-                to="/profile"
-                className="flex items-center space-x-2.5 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-indigo-500 text-white font-bold text-sm">
-                  {profile.name ? profile.name.charAt(0) : 'U'}
-                </div>
-                <span className="hidden md:inline text-sm font-semibold text-slate-700 dark:text-slate-300">
-                  {profile.name}
-                </span>
-              </Link>
+            {/* User Profile Quick Access & Quick Log Out */}
+            {!isLandingPage && profile && (
+              <div className="flex items-center space-x-1">
+                <Link
+                  to="/profile"
+                  className="flex items-center space-x-2.5 rounded-lg p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                >
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-indigo-500 text-white font-bold text-sm">
+                    {profile.name ? profile.name.charAt(0) : 'U'}
+                  </div>
+                  <span className="hidden md:inline text-sm font-semibold text-slate-700 dark:text-slate-300">
+                    {profile.name}
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    logoutUser();
+                    toast.success("Logged out. Your data remains saved!");
+                  }}
+                  title="Log Out"
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                >
+                  <FiLogOut className="h-4 w-4" />
+                </button>
+              </div>
             )}
             
             {isLandingPage && (

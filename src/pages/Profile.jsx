@@ -2,19 +2,19 @@ import React, { useState, useContext } from 'react';
 import { UserContext } from '../context/UserContext';
 import { useTheme } from '../hooks/useTheme';
 import Button from '../components/Button';
-import { FiUser, FiMail, FiBook, FiAward, FiPlus, FiX, FiCheck } from 'react-icons/fi';
+import { FiUser, FiMail, FiBook, FiAward, FiPlus, FiX, FiCheck, FiLogOut, FiTrash2 } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 export const Profile = () => {
-  const { profile, updateProfile } = useContext(UserContext);
+  const { profile, updateProfile, logoutUser, deleteAccount } = useContext(UserContext);
   const { theme } = useTheme();
 
   // Form local state initialized from context profile
-  const [name, setName] = useState(profile.name);
-  const [college, setCollege] = useState(profile.college);
-  const [branch, setBranch] = useState(profile.branch);
-  const [email, setEmail] = useState(profile.email);
-  const [skills, setSkills] = useState(profile.skills || []);
+  const [name, setName] = useState(profile?.name || '');
+  const [college, setCollege] = useState(profile?.college || '');
+  const [branch, setBranch] = useState(profile?.branch || '');
+  const [email, setEmail] = useState(profile?.email || '');
+  const [skills, setSkills] = useState(profile?.skills || []);
 
   const [newSkillText, setNewSkillText] = useState('');
 
@@ -220,6 +220,52 @@ export const Profile = () => {
               ) : (
                 <span className="text-xs text-slate-400 dark:text-slate-500">No skills added yet.</span>
               )}
+            </div>
+          </div>
+
+          {/* Account Session & Log Out */}
+          <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-darkBorder dark:bg-darkCard space-y-3">
+            <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <FiLogOut className="text-primary" /> Account Session
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              Currently signed in as <strong className="text-slate-800 dark:text-slate-200">{profile?.email || profile?.name}</strong>. Logging out keeps all your saved scores, tests, and notes safely stored on this device so you can log back in anytime.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  logoutUser();
+                  toast.success("Successfully logged out! Your data remains safely saved.");
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900 transition-all dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
+              >
+                <FiLogOut className="h-4 w-4" /> Log Out
+              </button>
+            </div>
+          </div>
+
+          {/* Danger Zone */}
+          <div className="rounded-xl border border-red-200 bg-red-50/50 p-6 shadow-sm dark:border-red-950/20 dark:bg-red-950/10 space-y-3">
+            <h3 className="text-sm font-bold text-red-800 dark:text-red-400 flex items-center gap-2">
+              <FiTrash2 className="text-red-500" /> Danger Zone
+            </h3>
+            <p className="text-xs text-red-650 dark:text-red-300 leading-relaxed">
+              Permanently delete this account and all associated test scores, mock attempts, and notes from this browser.
+            </p>
+            <div className="pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to permanently delete this account? All your scores and notes will be removed.")) {
+                    deleteAccount();
+                    toast.success("Account deleted.");
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-bold rounded-lg border border-red-200 bg-white text-red-600 hover:bg-red-50 hover:text-red-700 transition-all dark:border-red-950 dark:bg-darkCard dark:text-red-450 dark:hover:bg-red-950/30"
+              >
+                <FiTrash2 className="h-4 w-4" /> Delete This Account
+              </button>
             </div>
           </div>
 

@@ -149,7 +149,7 @@ export const Dashboard = () => {
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary via-blue-600 to-indigo-700 p-6 sm:p-8 text-white shadow-lg">
         <div className="relative z-10 max-w-xl">
           <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Welcome back, {profile.name}! 👋
+            Welcome back, {profile?.name || 'User'}! 👋
           </h2>
           <p className="mt-2 text-sm sm:text-base text-blue-100 leading-relaxed">
             You're doing great! Keep up the daily momentum. You are currently in the top 5% of placement preparers this week.

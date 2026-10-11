@@ -7,7 +7,7 @@ const initialProfile = {
   name: "Gunjan",
   college: "National Institute of Technology",
   branch: "Computer Science & Engineering",
-  email: "gunjan.student@nit.edu",
+  email: "demo@interviewace.com",
   skills: ["React", "JavaScript", "SQL", "Java", "Data Structures", "Operating Systems", "Networking"]
 };
 
@@ -80,73 +80,94 @@ const initialAtsHistory = [
   }
 ];
 
-export const UserProvider = ({ children }) => {
-  const [profile, setProfile] = useState(() => {
-    const saved = localStorage.getItem('user_profile');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const [solvedQuestions, setSolvedQuestions] = useState(() => {
-    const saved = localStorage.getItem('user_solved_questions');
-    if (saved) return JSON.parse(saved);
-    
-    // Seed some dummy solved questions (let's say 120 is the count, but we will seed some specific IDs
-    // and store a counter or seed standard list).
-    // Let's seed 15 active ones, and add a virtual count offset of 105 for display, 
-    // or just list a bunch of virtual solved IDs to reach 120.
-    const virtualSolved = [];
-    for (let i = 1; i <= 105; i++) {
-      virtualSolved.push(`virtual-q-${i}`);
+// Helper to get or initialize the multi-user database from localStorage
+const getUsersDb = () => {
+  try {
+    const raw = localStorage.getItem('app_users_db');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
     }
-    // Also include a few real question IDs
-    virtualSolved.push("dbms-1", "dbms-3", "os-1", "os-3", "cn-1", "cn-4", "java-1", "java-3", "hr-1", "apt-1");
-    return virtualSolved;
+  } catch (e) {
+    console.error("Error reading app_users_db", e);
+  }
+
+  // Pre-seed default demo account so anyone reviewing can immediately test login!
+  const defaultVirtualSolved = [];
+  for (let i = 1; i <= 105; i++) {
+    defaultVirtualSolved.push(`virtual-q-${i}`);
+  }
+  defaultVirtualSolved.push("dbms-1", "dbms-3", "os-1", "os-3", "cn-1", "cn-4", "java-1", "java-3", "hr-1", "apt-1");
+
+  const seeded = {
+    "demo@interviewace.com": {
+      email: "demo@interviewace.com",
+      password: "password123",
+      profile: initialProfile,
+      solvedQuestions: defaultVirtualSolved,
+      streak: 12,
+      notes: initialNotes,
+      mockAttempts: initialMockAttempts,
+      atsHistory: initialAtsHistory
+    }
+  };
+
+  try {
+    localStorage.setItem('app_users_db', JSON.stringify(seeded));
+  } catch (e) {
+    console.error("Error writing app_users_db", e);
+  }
+
+  return seeded;
+};
+
+export const UserProvider = ({ children }) => {
+  const [usersDb, setUsersDb] = useState(() => getUsersDb());
+  const [activeEmail, setActiveEmail] = useState(() => {
+    return localStorage.getItem('active_user_email') || null;
   });
 
-  const [streak, setStreak] = useState(() => {
-    const saved = localStorage.getItem('user_streak');
-    return saved ? parseInt(saved, 10) : 12; // Default 12 days
-  });
+  const currentRecord = activeEmail && usersDb[activeEmail] ? usersDb[activeEmail] : null;
 
-  const [notes, setNotes] = useState(() => {
-    const saved = localStorage.getItem('user_notes');
-    return saved ? JSON.parse(saved) : initialNotes;
-  });
+  const [profile, setProfile] = useState(() => currentRecord?.profile || null);
+  const [solvedQuestions, setSolvedQuestions] = useState(() => currentRecord?.solvedQuestions || []);
+  const [streak, setStreak] = useState(() => currentRecord?.streak || 0);
+  const [notes, setNotes] = useState(() => currentRecord?.notes || []);
+  const [mockAttempts, setMockAttempts] = useState(() => currentRecord?.mockAttempts || []);
+  const [atsHistory, setAtsHistory] = useState(() => currentRecord?.atsHistory || []);
 
-  const [mockAttempts, setMockAttempts] = useState(() => {
-    const saved = localStorage.getItem('user_mock_attempts');
-    return saved ? JSON.parse(saved) : initialMockAttempts;
-  });
-
-  const [atsHistory, setAtsHistory] = useState(() => {
-    const saved = localStorage.getItem('user_ats_history');
-    return saved ? JSON.parse(saved) : initialAtsHistory;
-  });
-
-  // Save to localStorage
+  // Sync active user state changes back to their saved account record in usersDb
   useEffect(() => {
+    if (!activeEmail || !profile) {
+      localStorage.removeItem('active_user_email');
+      localStorage.removeItem('user_profile');
+      return;
+    }
+
+    localStorage.setItem('active_user_email', activeEmail);
     localStorage.setItem('user_profile', JSON.stringify(profile));
-  }, [profile]);
 
-  useEffect(() => {
-    localStorage.setItem('user_solved_questions', JSON.stringify(solvedQuestions));
-  }, [solvedQuestions]);
-
-  useEffect(() => {
-    localStorage.setItem('user_streak', streak.toString());
-  }, [streak]);
-
-  useEffect(() => {
-    localStorage.setItem('user_notes', JSON.stringify(notes));
-  }, [notes]);
-
-  useEffect(() => {
-    localStorage.setItem('user_mock_attempts', JSON.stringify(mockAttempts));
-  }, [mockAttempts]);
-
-  useEffect(() => {
-    localStorage.setItem('user_ats_history', JSON.stringify(atsHistory));
-  }, [atsHistory]);
+    setUsersDb(prevDb => {
+      const existing = prevDb[activeEmail] || {};
+      const updatedUser = {
+        ...existing,
+        email: activeEmail,
+        profile,
+        solvedQuestions,
+        streak,
+        notes,
+        mockAttempts,
+        atsHistory
+      };
+      const newDb = { ...prevDb, [activeEmail]: updatedUser };
+      try {
+        localStorage.setItem('app_users_db', JSON.stringify(newDb));
+      } catch (err) {
+        console.error("Failed to sync to usersDb", err);
+      }
+      return newDb;
+    });
+  }, [activeEmail, profile, solvedQuestions, streak, notes, mockAttempts, atsHistory]);
 
   // Operations
   const toggleQuestionSolved = (questionId) => {
@@ -154,8 +175,6 @@ export const UserProvider = ({ children }) => {
       if (prev.includes(questionId)) {
         return prev.filter(id => id !== questionId);
       } else {
-        // Increment streak if it's the first solved question of the day (simplified)
-        // If not today's action, let's keep streak steady.
         return [...prev, questionId];
       }
     });
@@ -179,7 +198,6 @@ export const UserProvider = ({ children }) => {
 
   const addMockAttempt = (attempt) => {
     setMockAttempts((prev) => [attempt, ...prev]);
-    // Increment streak on attempts
     setStreak(prev => prev + 1);
   };
 
@@ -189,6 +207,119 @@ export const UserProvider = ({ children }) => {
 
   const incrementStreak = () => {
     setStreak(prev => prev + 1);
+  };
+
+  // Auth Operations
+  const loginUser = (email, password) => {
+    const norm = email.trim().toLowerCase();
+    const currentDb = getUsersDb();
+    const user = currentDb[norm];
+
+    if (!user) {
+      return { 
+        success: false, 
+        message: "No account found with this email. Please switch to the Sign Up tab to create one." 
+      };
+    }
+
+    if (user.password && password && user.password !== password) {
+      return { 
+        success: false, 
+        message: "Incorrect password. Please try again." 
+      };
+    }
+
+    setActiveEmail(norm);
+    setProfile(user.profile);
+    setSolvedQuestions(user.solvedQuestions || []);
+    setStreak(user.streak || 1);
+    setNotes(user.notes || []);
+    setMockAttempts(user.mockAttempts || []);
+    setAtsHistory(user.atsHistory || []);
+
+    localStorage.setItem('active_user_email', norm);
+    localStorage.setItem('user_profile', JSON.stringify(user.profile));
+
+    return { success: true, user: user.profile };
+  };
+
+  const registerUser = ({ name, email, password, college, branch, skills }) => {
+    const norm = email.trim().toLowerCase();
+    const currentDb = getUsersDb();
+
+    if (currentDb[norm]) {
+      return { 
+        success: false, 
+        message: "An account with this email already exists. Please switch to Log In." 
+      };
+    }
+
+    const newProfile = {
+      name: name.trim(),
+      email: norm,
+      college: college ? college.trim() : '',
+      branch: branch ? branch.trim() : '',
+      skills: skills || []
+    };
+
+    const newUser = {
+      email: norm,
+      password: password || 'password123',
+      profile: newProfile,
+      solvedQuestions: [],
+      streak: 1,
+      notes: [],
+      mockAttempts: [],
+      atsHistory: []
+    };
+
+    const nextDb = { ...currentDb, [norm]: newUser };
+    try {
+      localStorage.setItem('app_users_db', JSON.stringify(nextDb));
+    } catch (e) {
+      console.error(e);
+    }
+
+    setUsersDb(nextDb);
+    setActiveEmail(norm);
+    setProfile(newProfile);
+    setSolvedQuestions([]);
+    setStreak(1);
+    setNotes([]);
+    setMockAttempts([]);
+    setAtsHistory([]);
+
+    localStorage.setItem('active_user_email', norm);
+    localStorage.setItem('user_profile', JSON.stringify(newProfile));
+
+    return { success: true, user: newProfile };
+  };
+
+  const logoutUser = () => {
+    setActiveEmail(null);
+    setProfile(null);
+    setSolvedQuestions([]);
+    setStreak(0);
+    setNotes([]);
+    setMockAttempts([]);
+    setAtsHistory([]);
+    localStorage.removeItem('active_user_email');
+    localStorage.removeItem('user_profile');
+    return { success: true };
+  };
+
+  const deleteAccount = () => {
+    if (!activeEmail) return;
+    const currentDb = getUsersDb();
+    const nextDb = { ...currentDb };
+    delete nextDb[activeEmail];
+    try {
+      localStorage.setItem('app_users_db', JSON.stringify(nextDb));
+    } catch (e) {
+      console.error(e);
+    }
+    setUsersDb(nextDb);
+    logoutUser();
   };
 
   return (
@@ -206,7 +337,11 @@ export const UserProvider = ({ children }) => {
       updateProfile,
       addMockAttempt,
       addAtsResult,
-      incrementStreak
+      incrementStreak,
+      loginUser,
+      registerUser,
+      logoutUser,
+      deleteAccount
     }}>
       {children}
     </UserContext.Provider>
